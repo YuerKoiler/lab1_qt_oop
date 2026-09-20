@@ -13,25 +13,27 @@
 #include <QKeySequence>
 #include <QScreen>
 #include <QGuiApplication>
+#include <QButtonGroup>
+#include <QPaintEvent>
+#include <QDate>
+#include <QDateEdit>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , tickCount(0)
     , timerRunning(false)
+    , paintCount(0)
 {
     ui->setupUi(this);
 
-    // окно фиксированного размера ~1000x820, по центру экрана
+    // центрируем окно на экране
     if (QScreen *screen = QGuiApplication::primaryScreen()) {
         const QRect screenGeometry = screen->availableGeometry();
         move(screenGeometry.center() - rect().center());
     }
 
-    // включаем отслеживание мыши на самом окне и на всех дочерних виджетах,
-    // иначе перемещение мыши без нажатой кнопки не долетает до дочерних элементов.
-    // тот же eventFilter на уровне приложения ловит и нажатия клавиш —
-    // независимо от того, какой дочерний виджет сейчас в фокусе
+    // включаем трекинг мыши
     setMouseTracking(true);
     enableMouseTrackingRecursive(this);
     qApp->installEventFilter(this);
@@ -39,13 +41,24 @@ MainWindow::MainWindow(QWidget *parent)
     timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &MainWindow::onTimerTick);
 
-    // --- меню ---
+    // обновляем счётчик перерисовок
+    QTimer *paintTimer = new QTimer(this);
+    connect(paintTimer, &QTimer::timeout, this, [this]() {
+        static int lastLogged = -1;
+        if (lastLogged != paintCount) {
+            ui->labelPaintCount->setText(QString("Перерисовок окна: %1").arg(paintCount));
+            lastLogged = paintCount;
+        }
+    });
+    paintTimer->start(500);
+
+    // меню
     connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::onActionAboutTriggered);
     connect(ui->actionExit, &QAction::triggered, this, &MainWindow::onActionExitTriggered);
     connect(ui->actionClear, &QAction::triggered, this, &MainWindow::onActionClearTriggered);
     connect(ui->actionReset, &QAction::triggered, this, &MainWindow::onActionResetTriggered);
 
-    // --- п.5: сигналы/слоты ---
+    // сигналы, слоты
     connect(ui->pushButtonMain, &QPushButton::clicked, this, &MainWindow::onMainButtonClicked);
 
     connect(ui->sliderValue, &QSlider::valueChanged, this, &MainWindow::onSliderValueChanged);
@@ -55,6 +68,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->radioButtonA, &QRadioButton::toggled, this, &MainWindow::onRadioToggled);
     connect(ui->radioButtonB, &QRadioButton::toggled, this, &MainWindow::onRadioToggled);
+
+    // группа радиокнопок
+    QButtonGroup *radioGroup = new QButtonGroup(this);
+    radioGroup->addButton(ui->radioButtonA);
+    radioGroup->addButton(ui->radioButtonB);
 
     connect(ui->comboBoxItems, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onComboChanged);
 
@@ -66,19 +84,24 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->tabWidgetMain, &QTabWidget::currentChanged, this, &MainWindow::onTabChanged);
 
-    // --- п.6: один обработчик на несколько кнопок ---
+    // один обработчик на несколько кнопок
     connect(ui->pushButtonColor1, &QPushButton::clicked, this, &MainWindow::onColorButtonClicked);
     connect(ui->pushButtonColor2, &QPushButton::clicked, this, &MainWindow::onColorButtonClicked);
     connect(ui->pushButtonColor3, &QPushButton::clicked, this, &MainWindow::onColorButtonClicked);
 
-    // --- п.7: программный вызов обработчика/события ---
+    // программный вызов обработчика/события
     connect(ui->pushButtonCallHandler, &QPushButton::clicked, this, &MainWindow::onCallHandlerClicked);
     connect(ui->pushButtonCallEvent, &QPushButton::clicked, this, &MainWindow::onCallEventClicked);
 
-    // --- п.8: таймер ---
+    // таймер
     connect(ui->pushButtonTimerToggle, &QPushButton::clicked, this, &MainWindow::onTimerToggleClicked);
 
-    // начальная видимость пояснительной метки по чекбоксу
+    // динамическое создание/уничтожение элементов
+    connect(ui->pushButtonDeleteDynamic, &QPushButton::clicked, this, &MainWindow::onDeleteDynamicClicked);
+
+    connect(ui->dateEditValue, &QDateEdit::dateChanged, this, &MainWindow::onDateChanged);
+
+    // начальное состояние метки по чекбоксу
     onCheckToggled(ui->checkBoxEnable->isChecked() ? Qt::Checked : Qt::Unchecked);
 }
 
@@ -87,8 +110,9 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-// ===================== вспомогательные =====================
+// дополнительные:
 
+//трекинг мыши
 void MainWindow::enableMouseTrackingRecursive(QWidget *widget)
 {
     if (!widget)
@@ -100,17 +124,18 @@ void MainWindow::enableMouseTrackingRecursive(QWidget *widget)
         child->setMouseTracking(true);
 }
 
+// строка в журнал событий и прокрутка
 void MainWindow::logDebug(const QString &text)
 {
     ui->listWidgetDebugLog->addItem(text);
     ui->listWidgetDebugLog->scrollToBottom();
 }
 
-// ===================== меню =====================
+// меню (верхнее)
 
 void MainWindow::onActionAboutTriggered()
 {
-    QMessageBox::information(this, "Файл", "Пункт меню: О программе");
+    QMessageBox::information(this, "О программе", "Лабораторная работа №1, Богданова Мария ТОП-204Б");
     logDebug("Меню: О программе");
 }
 
@@ -134,7 +159,7 @@ void MainWindow::onActionResetTriggered()
     ui->dialValue->setValue(0);
     ui->scrollBarValue->setValue(0);
 
-    // снимаем подсветку с "нажатых" кнопок (п.6)
+    // убираем подсветку со всех трёх кнопок
     ui->pushButtonColor1->setStyleSheet("");
     ui->pushButtonColor2->setStyleSheet("");
     ui->pushButtonColor3->setStyleSheet("");
@@ -142,7 +167,7 @@ void MainWindow::onActionResetTriggered()
     logDebug("Меню: регуляторы сброшены, кнопки разблокированы");
 }
 
-// ===================== п.5: сигналы/слоты =====================
+// сигналы/слоты
 
 void MainWindow::onMainButtonClicked()
 {
@@ -156,6 +181,8 @@ void MainWindow::onMainButtonClicked()
     logDebug("Нажата кнопка «Нажми меня»");
 }
 
+// слайдер и спинбокс синхронизированы в обе стороны;
+// blockSignals нужен, чтобы не было рекурсии
 void MainWindow::onSliderValueChanged(int value)
 {
     if (ui->spinBoxValue->value() != value) {
@@ -177,29 +204,36 @@ void MainWindow::onSpinBoxValueChanged(int value)
 void MainWindow::onCheckToggled(int state)
 {
     ui->labelCheckBox->setVisible(state == Qt::Checked);
+    logDebug(QString("Чекбокс: %1").arg(state == Qt::Checked ? "включён" : "выключен"));
 }
 
+// один слот на две радиокнопки, определяем нажатую через sender
 void MainWindow::onRadioToggled(bool checked)
 {
     if (!checked)
         return;
 
     QRadioButton *rb = qobject_cast<QRadioButton*>(sender());
-    if (rb)
+    if (rb) {
         ui->labelRadio->setText("Выбран вариант: " + rb->text());
+        logDebug("Радиокнопка: " + rb->text());
+    }
 }
 
 void MainWindow::onComboChanged(int index)
 {
     ui->labelCombo->setText("Выбрано: " + ui->comboBoxItems->itemText(index));
+    logDebug("Комбобокс: " + ui->comboBoxItems->itemText(index));
 }
 
 void MainWindow::onListChanged(int row)
 {
-    if (row >= 0)
+    if (row >= 0) {
         ui->labelList->setText("Выбран элемент: " + ui->listWidgetItems->item(row)->text());
-    else
+        logDebug("Список: " + ui->listWidgetItems->item(row)->text());
+    } else {
         ui->labelList->setText("Выбран элемент: нет");
+    }
 }
 
 void MainWindow::onDialChanged(int value)
@@ -218,7 +252,7 @@ void MainWindow::onTabChanged(int index)
     logDebug(QString("Переключена вкладка: %1").arg(index + 1));
 }
 
-// ===================== п.6: один обработчик на несколько кнопок =====================
+// один обработчик на несколько кнопок
 
 void MainWindow::onColorButtonClicked()
 {
@@ -235,23 +269,23 @@ void MainWindow::onColorButtonClicked()
     logDebug("Нажата кнопка: " + btn->text());
 }
 
-// ===================== п.7: программный вызов обработчика/события =====================
+// вызов обработчика и события из кода
 
 void MainWindow::onCallHandlerClicked()
 {
-    // программный вызов обработчика: обычный вызов метода
+    // вызываем обработчик как обычный метод
     onMainButtonClicked();
     logDebug("Программный вызов обработчика (прямой вызов метода)");
 }
 
 void MainWindow::onCallEventClicked()
 {
-    // программный вызов события
+    // клик по кнопке программно
     logDebug("Программный вызов события (pushButtonMain->click())");
     ui->pushButtonMain->click();
 }
 
-// ===================== п.8: таймер (со своим прогрессбаром) =====================
+// таймер
 
 void MainWindow::onTimerToggleClicked()
 {
@@ -277,24 +311,30 @@ void MainWindow::onTimerTick()
     if (v > 100)
         v = 0;
     ui->progressBarTimer->setValue(v);
+
+    logDebug(QString("Тик таймера: %1").arg(tickCount));
 }
 
-// ===================== п.4: события мыши/клавиатуры/окна =====================
+// события мыши, клавиатуры и окна
 
 void MainWindow::mousePressEvent(QMouseEvent *event)
 {
-    ui->labelMousePress->setText(
-        QString("Мышь нажата: (%1, %2)").arg(event->pos().x()).arg(event->pos().y()));
+    const QString text = QString("Мышь нажата: (%1, %2)").arg(event->pos().x()).arg(event->pos().y());
+    ui->labelMousePress->setText(text);
+    logDebug(text);
     QMainWindow::mousePressEvent(event);
 }
 
 void MainWindow::mouseReleaseEvent(QMouseEvent *event)
 {
-    ui->labelMousePress->setText(
-        QString("Мышь отпущена: (%1, %2)").arg(event->pos().x()).arg(event->pos().y()));
+    const QString text = QString("Мышь отпущена: (%1, %2)").arg(event->pos().x()).arg(event->pos().y());
+    ui->labelMousePress->setText(text);
+    logDebug(text);
     QMainWindow::mouseReleaseEvent(event);
 }
 
+// фильтр событий на уровне приложения
+// ловит движение мыши по всему окну и клавиши независимо от фокуса, а также клики по области для создания кнопок
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 {
     if (event->type() == QEvent::MouseMove) {
@@ -302,36 +342,80 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
         QPoint posInWindow = mapFromGlobal(me->globalPos());
         ui->labelMouseMove->setText(
             QString("Позиция мыши: (%1, %2)").arg(posInWindow.x()).arg(posInWindow.y()));
-    } else if (event->type() == QEvent::KeyPress) {
+    } else if (event->type() == QEvent::KeyPress && watched == this) {
         handleKeyEvent(static_cast<QKeyEvent*>(event), true);
-    } else if (event->type() == QEvent::KeyRelease) {
+    } else if (event->type() == QEvent::KeyRelease && watched == this) {
         handleKeyEvent(static_cast<QKeyEvent*>(event), false);
+    } else if (event->type() == QEvent::MouseButtonPress && watched == ui->dynamicArea) {
+        // клик по свободной области - создаём кнопку
+        QMouseEvent *me = static_cast<QMouseEvent*>(event);
+        createDynamicButton(me->pos());
     }
     return QMainWindow::eventFilter(watched, event);
 }
 
+void MainWindow::paintEvent(QPaintEvent *event)
+{
+    // Считаем перерисовки
+    paintCount++;
+    QMainWindow::paintEvent(event);
+}
+
+// получаем читаемое имя клавиши
 void MainWindow::handleKeyEvent(QKeyEvent *event, bool pressed)
 {
     QString keyName = QKeySequence(event->key()).toString(QKeySequence::NativeText);
     if (keyName.isEmpty())
         keyName = QString("код %1").arg(event->key());
-    ui->labelKey->setText((pressed ? "Клавиша нажата: " : "Клавиша отпущена: ") + keyName);
+    const QString text = (pressed ? "Клавиша нажата: " : "Клавиша отпущена: ") + keyName;
+    ui->labelKey->setText(text);
+    logDebug(text);
 }
 
-void MainWindow::keyPressEvent(QKeyEvent *event)
-{
-    handleKeyEvent(event, true);
-    QMainWindow::keyPressEvent(event);
-}
-
-void MainWindow::keyReleaseEvent(QKeyEvent *event)
-{
-    handleKeyEvent(event, false);
-    QMainWindow::keyReleaseEvent(event);
-}
-
+// изменение размера
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
     ui->labelResize->setText(QString("Размер окна: %1 x %2").arg(width()).arg(height()));
+    logDebug(QString("Изменён размер окна: %1 x %2").arg(width()).arg(height()));
     QMainWindow::resizeEvent(event);
+}
+
+// создаём кнопку в точке клика внутри dynamic area и подписываем на слот
+
+void MainWindow::createDynamicButton(const QPoint &pos)
+{
+    QPushButton *btn = new QPushButton(QString("Кнопка %1").arg(dynamicButtons.size() + 1), ui->dynamicArea);
+    btn->move(pos.x() - btn->sizeHint().width() / 2, pos.y() - btn->sizeHint().height() / 2);
+    btn->show();
+
+    // все динамические кнопки используют один слот
+    connect(btn, &QPushButton::clicked, this, &MainWindow::onDynamicButtonClicked);
+
+    dynamicButtons.append(btn);
+    ui->labelDynamicInfo->setText(QString("Кнопок создано: %1").arg(dynamicButtons.size()));
+    logDebug(QString("Создана динамическая кнопка: %1").arg(btn->text()));
+}
+
+void MainWindow::onDynamicButtonClicked()
+{
+    QPushButton *btn = qobject_cast<QPushButton*>(sender());
+    if (btn)
+        logDebug("Нажата динамическая кнопка: " + btn->text());
+}
+
+void MainWindow::onDeleteDynamicClicked()
+{
+    if (dynamicButtons.isEmpty())
+        return;
+
+    QPushButton *btn = dynamicButtons.takeLast();
+    logDebug("Удалена динамическая кнопка: " + btn->text());
+    delete btn;
+
+    ui->labelDynamicInfo->setText(QString("Кнопок создано: %1").arg(dynamicButtons.size()));
+}
+
+void MainWindow::onDateChanged(const QDate &date)
+{
+    ui->labelCaptionDate->setText("Дата: " + date.toString("dd.MM.yyyy"));
 }

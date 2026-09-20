@@ -20,14 +20,14 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>Лабораторная работа 1 — Кнопки и Формы (вариант 3)</string>
+   <string>Лабораторная работа №1 - ООП</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayoutMain">
     <item>
      <widget class="QTabWidget" name="tabWidgetMain">
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tabPage1">
        <attribute name="title">
@@ -185,14 +185,24 @@
            </item>
            <item row="8" column="1">
             <widget class="QDateEdit" name="dateEditValue">
+             <property name="dateTime">
+              <datetime>
+               <hour>19</hour>
+               <minute>0</minute>
+               <second>0</second>
+               <year>2026</year>
+               <month>9</month>
+               <day>21</day>
+              </datetime>
+             </property>
              <property name="calendarPopup">
               <bool>true</bool>
              </property>
              <property name="date">
               <date>
-               <year>2025</year>
+               <year>2026</year>
                <month>9</month>
-               <day>12</day>
+               <day>21</day>
               </date>
              </property>
             </widget>
@@ -401,6 +411,64 @@
           </property>
           <property name="value">
            <number>0</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tabPage3">
+       <attribute name="title">
+        <string>Динамические элементы</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayoutTabPage3">
+        <item>
+         <widget class="QLabel" name="labelDynamicHint">
+          <property name="text">
+           <string>Кликните на область ниже - создаётся кнопка</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QFrame" name="dynamicArea">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>150</height>
+           </size>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::Shape::StyledPanel</enum>
+          </property>
+          <property name="frameShadow">
+           <enum>QFrame::Shadow::Sunken</enum>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButtonDeleteDynamic">
+          <property name="text">
+           <string>Удалить последнюю</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="Line" name="line">
+          <property name="orientation">
+           <enum>Qt::Orientation::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelDynamicInfo">
+          <property name="text">
+           <string>Кнопок создано: 0</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelPaintCount">
+          <property name="text">
+           <string>Перерисовок окна: 0</string>
           </property>
          </widget>
         </item>

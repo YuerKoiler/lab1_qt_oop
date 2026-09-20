@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QList>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -10,9 +11,13 @@ QT_END_NAMESPACE
 class QMouseEvent;
 class QKeyEvent;
 class QResizeEvent;
+class QPaintEvent;
 class QEvent;
 class QTimer;
 class QWidget;
+class QPushButton;
+class QDate;
+class QPoint;
 
 class MainWindow : public QMainWindow
 {
@@ -25,11 +30,10 @@ public:
 protected:
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
-    void keyPressEvent(QKeyEvent *event) override;
-    void keyReleaseEvent(QKeyEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
 
-    // ловит перемещение мыши по всему окну, включая дочерние виджеты
+    // ловит мышь и клавиатуру по окну
     bool eventFilter(QObject *watched, QEvent *event) override;
 
 private slots:
@@ -39,7 +43,7 @@ private slots:
     void onActionClearTriggered();
     void onActionResetTriggered();
 
-    // основные сигналы/слоты (п.5)
+    // основные сигналы, слоты
     void onMainButtonClicked();
     void onSliderValueChanged(int value);
     void onSpinBoxValueChanged(int value);
@@ -51,26 +55,36 @@ private slots:
     void onScrollChanged(int value);
     void onTabChanged(int index);
 
-    // один обработчик на несколько кнопок (п.6)
+    // один обработчик на несколько кнопок
     void onColorButtonClicked();
 
-    // программный вызов обработчика и события (п.7)
+    // программный вызов обработчика и события
     void onCallHandlerClicked();
     void onCallEventClicked();
 
-    // таймер (п.8) — со своим отдельным прогрессбаром
+    // таймер
     void onTimerToggleClicked();
     void onTimerTick();
+
+    // динамические кнопки
+    void onDynamicButtonClicked();
+    void onDeleteDynamicClicked();
+
+    // выбор даты
+    void onDateChanged(const QDate &date);
 
 private:
     void enableMouseTrackingRecursive(QWidget *widget);
     void logDebug(const QString &text);
     void handleKeyEvent(QKeyEvent *event, bool pressed);
+    void createDynamicButton(const QPoint &pos);
 
     Ui::MainWindow *ui;
     QTimer *timer;
     int tickCount;
     bool timerRunning;
+    int paintCount;
+    QList<QPushButton*> dynamicButtons;
 };
 
 #endif // MAINWINDOW_H
