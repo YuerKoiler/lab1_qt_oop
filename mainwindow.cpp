@@ -17,6 +17,8 @@
 #include <QPaintEvent>
 #include <QDate>
 #include <QDateEdit>
+#include <QPainter>
+
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -41,17 +43,6 @@ MainWindow::MainWindow(QWidget *parent)
     timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &MainWindow::onTimerTick);
 
-    // обновляем счётчик перерисовок
-    QTimer *paintTimer = new QTimer(this);
-    connect(paintTimer, &QTimer::timeout, this, [this]() {
-        static int lastLogged = -1;
-        if (lastLogged != paintCount) {
-            ui->labelPaintCount->setText(QString("Перерисовок окна: %1").arg(paintCount));
-            lastLogged = paintCount;
-        }
-    });
-    paintTimer->start(500);
-
     // меню
     connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::onActionAboutTriggered);
     connect(ui->actionExit, &QAction::triggered, this, &MainWindow::onActionExitTriggered);
@@ -64,7 +55,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->sliderValue, &QSlider::valueChanged, this, &MainWindow::onSliderValueChanged);
     connect(ui->spinBoxValue, QOverload<int>::of(&QSpinBox::valueChanged), this, &MainWindow::onSpinBoxValueChanged);
 
-    connect(ui->checkBoxEnable, &QCheckBox::stateChanged, this, &MainWindow::onCheckToggled);
+    connect(ui->checkBoxEnable, &QCheckBox::checkStateChanged, this, &MainWindow::onCheckToggled);
 
     connect(ui->radioButtonA, &QRadioButton::toggled, this, &MainWindow::onRadioToggled);
     connect(ui->radioButtonB, &QRadioButton::toggled, this, &MainWindow::onRadioToggled);
@@ -339,7 +330,7 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 {
     if (event->type() == QEvent::MouseMove) {
         QMouseEvent *me = static_cast<QMouseEvent*>(event);
-        QPoint posInWindow = mapFromGlobal(me->globalPos());
+        QPoint posInWindow = mapFromGlobal(me->globalPosition().toPoint());
         ui->labelMouseMove->setText(
             QString("Позиция мыши: (%1, %2)").arg(posInWindow.x()).arg(posInWindow.y()));
     } else if (event->type() == QEvent::KeyPress && watched == this) {
@@ -356,9 +347,8 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 
 void MainWindow::paintEvent(QPaintEvent *event)
 {
-    // Считаем перерисовки
     paintCount++;
-    QMainWindow::paintEvent(event);
+    QWidget::paintEvent(event);
 }
 
 // получаем читаемое имя клавиши
@@ -375,8 +365,15 @@ void MainWindow::handleKeyEvent(QKeyEvent *event, bool pressed)
 // изменение размера
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
+    // Ваша старая логика:
     ui->labelResize->setText(QString("Размер окна: %1 x %2").arg(width()).arg(height()));
     logDebug(QString("Изменён размер окна: %1 x %2").arg(width()).arg(height()));
+
+    // ДОБАВЛЯЕМ СЮДА ОБНОВЛЕНИЕ МЕТКИ:
+    if (ui && ui->labelPaintCount) {
+        ui->labelPaintCount->setText(QString("Перерисовок окна: %1").arg(paintCount));
+    }
+
     QMainWindow::resizeEvent(event);
 }
 

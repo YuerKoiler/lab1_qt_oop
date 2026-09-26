@@ -27,7 +27,7 @@
     <item>
      <widget class="QTabWidget" name="tabWidgetMain">
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="tabPage1">
        <attribute name="title">
@@ -102,16 +102,6 @@
              </property>
             </widget>
            </item>
-           <item row="0" column="1">
-            <widget class="QLineEdit" name="lineEditInput">
-             <property name="text">
-              <string/>
-             </property>
-             <property name="placeholderText">
-              <string>Текстовое поле</string>
-             </property>
-            </widget>
-           </item>
            <item row="1" column="0">
             <widget class="QLabel" name="labelCaptionCombo">
              <property name="text">
@@ -140,17 +130,17 @@
             <widget class="QComboBox" name="comboBoxItems">
              <item>
               <property name="text">
-               <string>Первый</string>
+               <string>Синус</string>
               </property>
              </item>
              <item>
               <property name="text">
-               <string>Второй</string>
+               <string>Косинус</string>
               </property>
              </item>
              <item>
               <property name="text">
-               <string>Третий</string>
+               <string>Тангенс</string>
               </property>
              </item>
             </widget>
@@ -187,7 +177,7 @@
             <widget class="QDateEdit" name="dateEditValue">
              <property name="dateTime">
               <datetime>
-               <hour>19</hour>
+               <hour>14</hour>
                <minute>0</minute>
                <second>0</second>
                <year>2026</year>
@@ -204,6 +194,16 @@
                <month>9</month>
                <day>21</day>
               </date>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLineEdit" name="lineEditInput">
+             <property name="text">
+              <string/>
+             </property>
+             <property name="placeholderText">
+              <string>Текстовое поле</string>
              </property>
             </widget>
            </item>
